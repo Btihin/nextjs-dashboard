@@ -31,13 +31,16 @@ export async function createInvoice(formData: FormData) {
     status: formData.get('status'),
   });
   const date = new Date().toISOString().split('T')[0];
-
-  await sql`
+  try {
+    await sql`
     INSERT INTO invoices (customer_id, amount, status, date) VALUES (${customerId},${AmountInCents(
       amount,
     )},${status},${date})
     `;
-
+  } catch (error) {
+    console.error('Database Error:', error);
+    return { message: 'Database Error: Chyba vytvoření faktury.' };
+  }
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
 }
@@ -53,14 +56,17 @@ export async function updateInvoice(id: string, formData: FormData) {
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
-  await sql`
-  UPDATE invoices
-  SET customer_id = ${customerId}, amount = ${AmountInCents(
-    amount,
-  )}, status = ${status}
-  WHERE id = ${id}
-`;
-
+  try {
+    await sql`
+    UPDATE invoices
+    SET customer_id = ${customerId}, amount = ${AmountInCents(
+      amount,
+    )}, status = ${status}
+      WHERE id = ${id}
+      `;
+  } catch (error) {
+    return { message: 'Database Error: Chyba úpravy faktury.' };
+  }
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
 }
@@ -68,7 +74,12 @@ export async function updateInvoice(id: string, formData: FormData) {
 
 //#region Smazání stávající faktury ___________________________________________________________________________________
 export async function deleteInvoice(id: string) {
-  await sql`DELETE FROM invoices WHERE id = ${id}`;
-  revalidatePath('/dashboard/invoices');
+  throw new Error('Failed to Delete Invoice');
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+    return { message: 'Faktura smazána.' };
+  } catch (error) {
+    return { message: 'Database Error: Chyba úpravy faktury.' };
+  }
 }
 //#endregion Smazání stávající faktury ___________________________________________________________________________________
